@@ -1094,12 +1094,12 @@ function createTopographicRenderer(): EffectRenderer {
   }
 
   function project(nx: number, depth: number, frame: EffectFrame) {
-    const horizonY = frame.height * 0.24
-    const spread = 0.16 + depth ** 0.9 * 0.72
+    const horizonY = -frame.height * 0.035
+    const spread = 0.52 + depth ** 0.9 * 0.42
     const height = terrainHeight(nx, depth)
     return {
       x: frame.width * 0.5 + nx * frame.width * spread,
-      y: horizonY + depth ** 1.36 * frame.height * 0.86 - height * frame.height * 0.34,
+      y: horizonY + depth ** 1.28 * frame.height * 1.09 - height * frame.height * 0.34,
     }
   }
 
@@ -1143,8 +1143,8 @@ function createTopographicRenderer(): EffectRenderer {
     horizon.addColorStop(0.5, rgba(frame.palette.primary, frame.palette.softOpacity * 0.75))
     horizon.addColorStop(1, rgba(frame.palette.primary, 0))
     context.beginPath()
-    context.moveTo(0, frame.height * 0.24)
-    context.lineTo(frame.width, frame.height * 0.24)
+    context.moveTo(0, 0)
+    context.lineTo(frame.width, 0)
     context.strokeStyle = horizon
     context.lineWidth = 1
     context.stroke()
@@ -1246,7 +1246,7 @@ function createPerspectiveGridRenderer(): EffectRenderer {
   }
 
   function draw(context: CanvasRenderingContext2D, frame: EffectFrame) {
-    const horizonY = frame.height * 0.36
+    const horizonY = 0
     const vanishX = frame.width * 0.5
     const bottomY = frame.height + 20
     const columns = frame.width <= 700 ? 10 : 18
