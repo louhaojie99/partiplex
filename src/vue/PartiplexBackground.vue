@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { BackgroundEffectId, PartiplexPlaybackConfig, BackgroundTheme } from '../core/types'
+import type { BackgroundEffectId, BackgroundTheme, PartiplexPlaybackConfig } from '../core/types'
 import { usePartiplexBackground } from './usePartiplexBackground'
 
 defineOptions({ name: 'PartiplexBackground' })

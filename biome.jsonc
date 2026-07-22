@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.3.11/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.5/schema.json",
   "files": {
     "includes": ["**", "!!dist", "!!docs/.vitepress/cache", "!!docs/.vitepress/dist"]
   },
@@ -20,5 +20,36 @@
     "formatter": {
       "trailingCommas": "none"
     }
-  }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended"
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.vue"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            // Vue 模板会使用脚本中的导入，Biome 目前无法跨区块识别这些引用。
+            "noUnusedImports": "off",
+            // Vue 模板会使用 script setup 中的变量，Biome 目前会将其误判为未使用。
+            "noUnusedVariables": "off",
+            // Vue 组合式函数不受 React Hooks 调用位置规则约束。
+            "useHookAtTopLevel": "off"
+          }
+        }
+      }
+    }
+  ]
 }

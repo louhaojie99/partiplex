@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { withBase } from 'vitepress'
-import { effectDocs, type DocsLocale } from '../data/effects'
+import { type DocsLocale, effectDocs } from '../data/effects'
 import EffectPreviewCard from './EffectPreviewCard.vue'
 
 const props = withDefaults(

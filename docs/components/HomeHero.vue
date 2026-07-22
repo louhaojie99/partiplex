@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useData, withBase } from 'vitepress'
-import { PartiplexController, type BackgroundEffectId } from '../../src/index'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { type BackgroundEffectId, PartiplexController } from '../../src/index'
 import type { DocsLocale } from '../data/effects'
 
 const props = withDefaults(

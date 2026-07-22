@@ -6,14 +6,15 @@ import {
 import { createEffectRenderer } from './renderers'
 import type {
   BackgroundEffectId,
-  PartiplexPlaybackConfig,
-  PartiplexControllerOptions,
   BackgroundTheme,
   EffectFrame,
   EffectRenderer,
+  PartiplexControllerOptions,
+  PartiplexPlaybackConfig,
   PartiplexState,
 } from './types'
 
+/** 管理 Canvas 生命周期、播放配置和渲染循环的核心控制器。 */
 export class PartiplexController {
   private readonly canvas: HTMLCanvasElement
   private readonly context: CanvasRenderingContext2D
@@ -43,6 +44,7 @@ export class PartiplexController {
   private manuallyPaused = false
   private pointer = { x: 0, y: 0, active: false }
 
+  /** 使用目标 Canvas 和可选配置创建控制器，调用 start() 后开始渲染。 */
   constructor(canvas: HTMLCanvasElement, options: PartiplexControllerOptions = {}) {
     const context = canvas.getContext('2d')
     if (!context) throw new Error('PartiplexController requires a 2D canvas context.')
@@ -68,6 +70,7 @@ export class PartiplexController {
     this.renderer = createEffectRenderer(this.activeEffect)
   }
 
+  /** 绑定浏览器事件并启动渲染循环；重复调用不会重复初始化。 */
   start() {
     if (this.started || this.destroyed) return this
     this.started = true
@@ -87,7 +90,7 @@ export class PartiplexController {
     return this
   }
 
-  /** Update fixed or rotating playback without recreating the Canvas. */
+  /** 在不重新创建 Canvas 的情况下更新固定或轮播配置。 */
   setPlayback(config: Partial<PartiplexPlaybackConfig>) {
     this.config = normalizePartiplexPlaybackConfig({ ...this.config, ...config })
     const candidates = this.getRotationCandidates()
@@ -105,7 +108,7 @@ export class PartiplexController {
     return this
   }
 
-  /** Pause or resume rendering. Prefer pause() and resume() for event handlers. */
+  /** 暂停或恢复渲染；事件处理函数中优先使用 pause() 和 resume()。 */
   setPaused(paused: boolean) {
     if (this.manuallyPaused === paused) return this
     this.manuallyPaused = paused
@@ -118,6 +121,7 @@ export class PartiplexController {
     return this
   }
 
+  /** 更新背景明暗主题并立即重绘。 */
   setTheme(theme: BackgroundTheme) {
     if (this.theme === theme) return this
     this.theme = theme
@@ -126,6 +130,7 @@ export class PartiplexController {
     return this
   }
 
+  /** 更新背景效果强度并立即重绘。 */
   setIntensity(intensity: number) {
     const nextIntensity = Math.min(1.9, Math.max(0.5, intensity))
     if (this.intensity === nextIntensity) return this
@@ -135,6 +140,7 @@ export class PartiplexController {
     return this
   }
 
+  /** 设置最大渲染帧率；传入 undefined 表示跟随浏览器刷新率。 */
   setMaxFps(maxFps?: number) {
     this.minFrameIntervalMs = maxFps && maxFps > 0 ? 1000 / maxFps : 0
     this.previousFrameAt = 0
@@ -142,6 +148,7 @@ export class PartiplexController {
     return this
   }
 
+  /** 开启或关闭指针交互，并同步绑定或移除相关事件。 */
   setInteractive(interactive: boolean) {
     if (this.interactive === interactive) return this
     this.interactive = interactive
@@ -158,26 +165,28 @@ export class PartiplexController {
     return this
   }
 
-  /** Switch to one effect and disable rotation. */
+  /** 切换到指定效果并关闭轮播。 */
   setEffect(effectId: BackgroundEffectId) {
     this.setPlayback({ mode: 'fixed', fixedEffect: effectId })
     return this
   }
 
-  /** Pause animation while keeping the current frame visible. */
+  /** 暂停动画并保留当前画面。 */
   pause() {
     return this.setPaused(true)
   }
 
-  /** Resume animation after pause(). */
+  /** 恢复由 pause() 暂停的动画。 */
   resume() {
     return this.setPaused(false)
   }
 
+  /** 获取当前正在展示的效果标识。 */
   getCurrentEffect() {
     return this.activeEffect
   }
 
+  /** 获取当前播放配置的副本，避免外部直接修改内部数组。 */
   getPlayback(): PartiplexPlaybackConfig {
     return {
       ...this.config,
@@ -185,10 +194,12 @@ export class PartiplexController {
     }
   }
 
+  /** 判断动画是否已被调用方手动暂停。 */
   isPaused() {
     return this.manuallyPaused
   }
 
+  /** 获取当前控制器状态的只读快照。 */
   getState(): PartiplexState {
     return {
       currentEffect: this.activeEffect,
@@ -201,26 +212,7 @@ export class PartiplexController {
     }
   }
 
-  /** @deprecated Use setPlayback(). */
-  configure(config: Partial<PartiplexPlaybackConfig>) {
-    return this.setPlayback(config)
-  }
-
-  /** @deprecated Use setEffect(). */
-  show(effectId: BackgroundEffectId) {
-    return this.setEffect(effectId)
-  }
-
-  /** @deprecated Use getCurrentEffect(). */
-  getActiveEffect() {
-    return this.getCurrentEffect()
-  }
-
-  /** @deprecated Use getPlayback(). */
-  getConfig() {
-    return this.getPlayback()
-  }
-
+  /** 停止渲染、解绑事件并清空 Canvas。 */
   destroy() {
     if (this.destroyed) return
     this.destroyed = true
@@ -321,7 +313,7 @@ export class PartiplexController {
         Math.max(0, (now - this.transitionStartedAt) / this.transitionDurationMs),
       )
       const easedProgress =
-        progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2
+        progress < 0.5 ? 4 * progress * progress * progress : 1 - (-2 * progress + 2) ** 3 / 2
 
       this.context.save()
       this.context.globalAlpha = 1 - easedProgress

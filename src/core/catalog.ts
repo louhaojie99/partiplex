@@ -1,11 +1,12 @@
 import type {
   BackgroundEffectDefinition,
   BackgroundEffectId,
-  PartiplexPlaybackConfig,
   BackgroundTheme,
   EffectPalette,
+  PartiplexPlaybackConfig,
 } from './types'
 
+/** Partiplex 内置效果的完整元数据目录。 */
 export const BACKGROUND_EFFECTS: readonly BackgroundEffectDefinition[] = [
   {
     id: 'constellation',
@@ -109,8 +110,10 @@ export const BACKGROUND_EFFECTS: readonly BackgroundEffectDefinition[] = [
   },
 ]
 
+/** 按目录顺序排列的全部内置效果标识。 */
 export const BACKGROUND_EFFECT_IDS = BACKGROUND_EFFECTS.map(({ id }) => id)
 
+/** 未传入配置时使用的默认播放行为。 */
 export const DEFAULT_PARTIPLEX_PLAYBACK: PartiplexPlaybackConfig = {
   mode: 'fixed',
   fixedEffect: 'constellation',
@@ -122,10 +125,12 @@ const effectIdSet = new Set<BackgroundEffectId>(BACKGROUND_EFFECT_IDS)
 const MIN_INTERVAL_MS = 10_000
 const MAX_INTERVAL_MS = 120_000
 
+/** 判断未知值是否为有效的内置效果标识。 */
 export function isBackgroundEffectId(value: unknown): value is BackgroundEffectId {
   return typeof value === 'string' && effectIdSet.has(value as BackgroundEffectId)
 }
 
+/** 校验并补全外部传入的播放配置。 */
 export function normalizePartiplexPlaybackConfig(
   input: Partial<PartiplexPlaybackConfig> | null | undefined,
 ): PartiplexPlaybackConfig {
@@ -147,12 +152,7 @@ export function normalizePartiplexPlaybackConfig(
   }
 }
 
-/** @deprecated Use DEFAULT_PARTIPLEX_PLAYBACK. */
-export const DEFAULT_BACKGROUND_EFFECTS_CONFIG = DEFAULT_PARTIPLEX_PLAYBACK
-
-/** @deprecated Use normalizePartiplexPlaybackConfig(). */
-export const normalizeBackgroundEffectsConfig = normalizePartiplexPlaybackConfig
-
+/** 根据明暗主题生成效果渲染器使用的调色板。 */
 export function getEffectPalette(theme: BackgroundTheme): EffectPalette {
   if (theme === 'light') {
     return {
@@ -173,6 +173,7 @@ export function getEffectPalette(theme: BackgroundTheme): EffectPalette {
   }
 }
 
+/** 将 RGB 三元组和透明度转换为 CSS rgba() 颜色字符串。 */
 export function rgba(color: [number, number, number], opacity: number): string {
   return `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${opacity})`
 }

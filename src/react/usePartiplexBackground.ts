@@ -1,30 +1,46 @@
-import { useCallback, useEffect, useRef, type RefObject } from 'react'
+import { type RefObject, useCallback, useEffect, useRef } from 'react'
 import { PartiplexController } from '../core/sdk'
-import type { BackgroundEffectId, PartiplexPlaybackConfig, BackgroundTheme } from '../core/types'
+import type { BackgroundEffectId, BackgroundTheme, PartiplexPlaybackConfig } from '../core/types'
 
+/** React Hook 和组件共用的背景选项。 */
 export interface PartiplexBackgroundOptions {
+  /** 覆盖默认播放行为的配置。 */
   config?: Partial<PartiplexPlaybackConfig>
+  /** 固定展示单个效果的快捷配置。 */
   effect?: BackgroundEffectId
+  /** 当前明暗主题。 */
   theme?: BackgroundTheme
+  /** 是否启用指针交互。 */
   interactive?: boolean
+  /** 背景效果强度。 */
   intensity?: number
+  /** 最大渲染帧率。 */
   maxFps?: number
+  /** 是否暂停动画。 */
   paused?: boolean
+  /** 效果切换完成时触发的回调。 */
   onEffectChange?: (effectId: BackgroundEffectId) => void
 }
 
-/** @deprecated Use PartiplexBackgroundOptions. */
-export type ReactBackgroundEffectsOptions = PartiplexBackgroundOptions
-
+/** React Hook 返回的背景控制方法。 */
 export interface PartiplexBackgroundControls {
+  /** 当前控制器引用，在组件挂载完成前为 null。 */
   controllerRef: RefObject<PartiplexController | null>
+  /** 切换到指定效果并关闭轮播。 */
   setEffect: (effectId: BackgroundEffectId) => void
+  /** 更新固定或轮播播放配置。 */
   setPlayback: (config: Partial<PartiplexPlaybackConfig>) => void
+  /** 更新背景明暗主题。 */
   setTheme: (theme: BackgroundTheme) => void
+  /** 更新背景效果强度。 */
   setIntensity: (intensity: number) => void
+  /** 更新最大渲染帧率。 */
   setMaxFps: (maxFps?: number) => void
+  /** 开启或关闭指针交互。 */
   setInteractive: (interactive: boolean) => void
+  /** 暂停动画并保留当前画面。 */
   pause: () => void
+  /** 恢复已暂停的动画。 */
   resume: () => void
 }
 
@@ -39,17 +55,9 @@ export function usePartiplexBackground(
   useEffect(() => {
     if (!canvasRef.current) return
     const controller = new PartiplexController(canvasRef.current, {
-      config: options.config,
-      effect: options.effect,
-      theme: options.theme,
-      interactive: options.interactive,
-      intensity: options.intensity,
-      maxFps: options.maxFps,
       onEffectChange: (effectId) => onEffectChangeRef.current?.(effectId),
     }).start()
     controllerRef.current = controller
-    if (options.effect) controller.setEffect(options.effect)
-    if (options.paused) controller.pause()
 
     return () => {
       controller.destroy()
@@ -117,12 +125,4 @@ export function usePartiplexBackground(
     pause,
     resume,
   }
-}
-
-/** @deprecated Use usePartiplexBackground(). */
-export function useBackgroundEffects(
-  canvasRef: RefObject<HTMLCanvasElement | null>,
-  options: ReactBackgroundEffectsOptions = {},
-) {
-  return usePartiplexBackground(canvasRef, options).controllerRef
 }

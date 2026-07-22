@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { withBase } from 'vitepress'
+import { computed } from 'vue'
 import type { BackgroundEffectId } from '../../src/index'
-import { effectDocs, getEffectDoc, type DocsLocale } from '../data/effects'
+import { type DocsLocale, effectDocs, getEffectDoc } from '../data/effects'
 import EffectPlayground from './EffectPlayground.vue'
 
 const props = withDefaults(

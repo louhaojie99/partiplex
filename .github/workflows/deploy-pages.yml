@@ -1,0 +1,68 @@
+name: 部署文档站到 GitHub Pages
+
+on:
+  # 仅在默认分支更新后自动部署。
+  push:
+    branches: [master]
+  # 允许在 GitHub Actions 页面手动触发部署。
+  workflow_dispatch:
+
+# Pages 部署需要读取仓库、写入 Pages 和签发身份令牌。
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一时间只保留一次 Pages 部署，避免旧版本覆盖新版本。
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 构建文档站
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v6
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: 配置 Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 检查 Biome 代码规范
+        run: pnpm lint
+
+      - name: 配置 GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: 构建文档站
+        run: pnpm docs:build
+        env:
+          # 项目站点部署在仓库同名子路径下。
+          DOCS_BASE: /${{ github.event.repository.name }}/
+
+      - name: 上传 Pages 构建产物
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs/.vitepress/dist
+
+  deploy:
+    name: 发布文档站
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 部署到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

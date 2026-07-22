@@ -1,51 +1,59 @@
 import { PartiplexController } from './sdk'
 import type {
   BackgroundEffectId,
-  PartiplexPlaybackConfig,
-  PartiplexControllerOptions,
   BackgroundTheme,
+  PartiplexControllerOptions,
+  PartiplexPlaybackConfig,
   PartiplexState,
 } from './types'
 
+/** 创建并挂载背景时使用的选项。 */
 export interface CreatePartiplexBackgroundOptions extends PartiplexControllerOptions {
-  /** Canvas mount target. Defaults to document.body. */
+  /** Canvas 挂载目标，默认为 document.body。 */
   target?: HTMLElement | string
-  /** Starts in fixed mode with this effect. */
+  /** 使用该效果并以固定模式启动。 */
   effect?: BackgroundEffectId
-  /** Additional class name applied to the generated Canvas. */
+  /** 添加到生成 Canvas 上的额外类名。 */
   className?: string
-  /** CSS position used by the generated Canvas. */
+  /** 生成 Canvas 使用的 CSS 定位方式。 */
   position?: 'fixed' | 'absolute'
-  /** CSS z-index used by the generated Canvas. */
+  /** 生成 Canvas 使用的 CSS 层叠顺序。 */
   zIndex?: number
 }
 
-/** @deprecated Use CreatePartiplexBackgroundOptions. */
-export type MountBackgroundEffectsOptions = CreatePartiplexBackgroundOptions
-
+/** 已挂载背景对外提供的控制接口。 */
 export interface PartiplexBackground {
+  /** 挂载到页面中的 Canvas 元素。 */
   canvas: HTMLCanvasElement
-  /** Full controller for advanced use. */
+  /** 用于高级操作的完整控制器。 */
   controller: PartiplexController
-  /** @deprecated Use controller. */
-  sdk: PartiplexController
+  /** 切换到指定效果并关闭轮播。 */
   setEffect: (effectId: BackgroundEffectId) => PartiplexBackground
+  /** 更新固定或轮播播放配置。 */
   setPlayback: (config: Partial<PartiplexPlaybackConfig>) => PartiplexBackground
+  /** 更新背景明暗主题。 */
   setTheme: (theme: BackgroundTheme) => PartiplexBackground
+  /** 更新背景效果强度。 */
   setIntensity: (intensity: number) => PartiplexBackground
+  /** 更新最大渲染帧率。 */
   setMaxFps: (maxFps?: number) => PartiplexBackground
+  /** 开启或关闭指针交互。 */
   setInteractive: (interactive: boolean) => PartiplexBackground
+  /** 暂停动画并保留当前画面。 */
   pause: () => PartiplexBackground
+  /** 恢复已暂停的动画。 */
   resume: () => PartiplexBackground
+  /** 获取当前效果标识。 */
   getCurrentEffect: () => BackgroundEffectId
+  /** 获取当前播放配置的副本。 */
   getPlayback: () => PartiplexPlaybackConfig
+  /** 判断动画是否已被手动暂停。 */
   isPaused: () => boolean
+  /** 获取控制器当前状态的快照。 */
   getState: () => PartiplexState
+  /** 销毁控制器并移除 Canvas。 */
   destroy: () => void
 }
-
-/** @deprecated Use PartiplexBackground. */
-export type MountedBackgroundEffects = PartiplexBackground
 
 function resolveTarget(target: HTMLElement | string | undefined) {
   if (!target) return document.body
@@ -55,7 +63,7 @@ function resolveTarget(target: HTMLElement | string | undefined) {
   return element
 }
 
-/** Creates, mounts, and starts a Partiplex background in one call. */
+/** 一次性创建、挂载并启动 Partiplex 背景。 */
 export function createPartiplexBackground(
   options: CreatePartiplexBackgroundOptions = {},
 ): PartiplexBackground {
@@ -104,7 +112,6 @@ export function createPartiplexBackground(
   const background: PartiplexBackground = {
     canvas,
     controller,
-    sdk: controller,
     setEffect(effectId) {
       controller.setEffect(effectId)
       return background
@@ -151,9 +158,3 @@ export function createPartiplexBackground(
 
   return background
 }
-
-/** @deprecated Use createPartiplexBackground(). */
-export const mountBackgroundEffects = createPartiplexBackground
-
-/** Short alias for createPartiplexBackground(). */
-export const partiplex = createPartiplexBackground

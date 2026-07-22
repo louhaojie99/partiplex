@@ -1,7 +1,8 @@
 import { defineConfig } from 'vitepress'
 import { effectDocs } from '../data/effects'
 
-const base = process.env.DOCS_BASE ?? '/'
+/** GitHub Pages 项目站点的默认基础路径，可通过环境变量覆盖以适配自定义域名。 */
+const base = process.env.DOCS_BASE ?? '/partiplex/'
 const github = 'https://github.com/louhaojie99/partiplex'
 
 const zhEffects = effectDocs.map((effect) => ({
@@ -25,6 +26,7 @@ export default defineConfig({
     return { title: copy.name, description: copy.description }
   },
   head: [
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: `${base}icon.svg` }],
     ['meta', { name: 'theme-color', content: '#050505' }],
     ['meta', { name: 'color-scheme', content: 'dark light' }],
   ],

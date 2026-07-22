@@ -1,28 +1,34 @@
 import {
+  type MaybeRefOrGetter,
   onBeforeUnmount,
   onMounted,
+  type Ref,
   shallowRef,
   toValue,
   watch,
-  type MaybeRefOrGetter,
-  type Ref,
 } from 'vue'
 import { PartiplexController } from '../core/sdk'
-import type { BackgroundEffectId, PartiplexPlaybackConfig, BackgroundTheme } from '../core/types'
+import type { BackgroundEffectId, BackgroundTheme, PartiplexPlaybackConfig } from '../core/types'
 
+/** Vue 组合式函数和组件共用的背景选项。 */
 export interface PartiplexBackgroundOptions {
+  /** 覆盖默认播放行为的配置。 */
   config?: Partial<PartiplexPlaybackConfig>
+  /** 固定展示单个效果的快捷配置。 */
   effect?: BackgroundEffectId
+  /** 当前明暗主题。 */
   theme?: BackgroundTheme
+  /** 是否启用指针交互。 */
   interactive?: boolean
+  /** 背景效果强度。 */
   intensity?: number
+  /** 最大渲染帧率。 */
   maxFps?: number
+  /** 是否暂停动画。 */
   paused?: boolean
+  /** 效果切换完成时触发的回调。 */
   onEffectChange?: (effectId: BackgroundEffectId) => void
 }
-
-/** @deprecated Use PartiplexBackgroundOptions. */
-export type VueBackgroundEffectsOptions = PartiplexBackgroundOptions
 
 export function usePartiplexBackground(
   canvas: Ref<HTMLCanvasElement | null>,
@@ -101,8 +107,6 @@ export function usePartiplexBackground(
 
   return {
     controller,
-    /** @deprecated Use controller. */
-    sdk: controller,
     setEffect,
     setPlayback,
     setTheme,
@@ -113,6 +117,3 @@ export function usePartiplexBackground(
     resume,
   }
 }
-
-/** @deprecated Use usePartiplexBackground(). */
-export const useBackgroundEffects = usePartiplexBackground

@@ -181,7 +181,7 @@ function createGalaxyVortexRenderer(): EffectRenderer {
     const count = frame.width <= 700 ? 150 : 360
     sparks = Array.from({ length: count }, () => ({
       arm: Math.floor(Math.random() * 5),
-      progress: Math.pow(Math.random(), 0.72),
+      progress: Math.random() ** 0.72,
       offset: randomBetween(-0.12, 0.12),
       size: randomBetween(0.35, 1.7),
       strength: randomBetween(0.42, 1),
@@ -196,7 +196,7 @@ function createGalaxyVortexRenderer(): EffectRenderer {
 
   function spiralPoint(arm: number, progress: number, offset: number, frame: EffectFrame) {
     const angle = (arm / 5) * Math.PI * 2 + progress * Math.PI * 3.45 + elapsed * 0.032
-    const radius = Math.pow(progress, 0.82)
+    const radius = progress ** 0.82
     const longRadius = Math.max(frame.width, frame.height * 1.35) * 0.63
     return {
       x: Math.cos(angle) * longRadius * radius,
@@ -588,7 +588,7 @@ function createFlowFieldRenderer(): EffectRenderer {
 
     for (let gate = 0; gate < (frame.width <= 700 ? 6 : 9); gate += 1) {
       const progress = wrap(gate / 9 + elapsed * 0.11, 0, 1)
-      const depth = Math.pow(progress, 1.72)
+      const depth = progress ** 1.72
       const halfWidth = 16 + depth * frame.width * 0.68
       const halfHeight = 10 + depth * frame.height * 0.64
       const shoulder = halfWidth * 0.72
@@ -1085,8 +1085,8 @@ function createTopographicRenderer(): EffectRenderer {
   }
 
   function terrainHeight(nx: number, depth: number) {
-    const ridge = Math.exp(-Math.pow((nx + 0.18) / 0.28, 2)) * 0.72
-    const secondRidge = Math.exp(-Math.pow((nx - 0.36) / 0.2, 2)) * 0.48
+    const ridge = Math.exp(-(((nx + 0.18) / 0.28) ** 2)) * 0.72
+    const secondRidge = Math.exp(-(((nx - 0.36) / 0.2) ** 2)) * 0.48
     const waves =
       Math.sin(nx * 8.5 + depth * 4.2 + elapsed * 0.12) * 0.12 +
       Math.cos(nx * 15 - depth * 6.5 - elapsed * 0.08) * 0.055
@@ -1095,11 +1095,11 @@ function createTopographicRenderer(): EffectRenderer {
 
   function project(nx: number, depth: number, frame: EffectFrame) {
     const horizonY = frame.height * 0.24
-    const spread = 0.16 + Math.pow(depth, 0.9) * 0.72
+    const spread = 0.16 + depth ** 0.9 * 0.72
     const height = terrainHeight(nx, depth)
     return {
       x: frame.width * 0.5 + nx * frame.width * spread,
-      y: horizonY + Math.pow(depth, 1.36) * frame.height * 0.86 - height * frame.height * 0.34,
+      y: horizonY + depth ** 1.36 * frame.height * 0.86 - height * frame.height * 0.34,
     }
   }
 
@@ -1402,7 +1402,7 @@ function createPortalRingsRenderer(): EffectRenderer {
     maxRadiusY = frame.height * 0.56
     rings = Array.from({ length: 15 }, (_, index) => {
       const progress = (index + 1) / 15
-      const perspective = Math.pow(progress, 1.55)
+      const perspective = progress ** 1.55
       return {
         radiusX: maxRadiusX * (0.08 + perspective * 0.92),
         radiusY: maxRadiusY * (0.06 + perspective * 0.94),
@@ -1513,9 +1513,10 @@ function createCrystalCellsRenderer(): EffectRenderer {
     const points: Array<Array<{ x: number; y: number }>> = []
 
     for (let row = 0; row <= rows; row += 1) {
-      points[row] = []
+      const rowPoints: Array<{ x: number; y: number }> = []
+      points[row] = rowPoints
       for (let column = 0; column <= columns; column += 1) {
-        points[row]![column] = {
+        rowPoints[column] = {
           x: column * size + randomBetween(-size * 0.22, size * 0.22),
           y: row * size + randomBetween(-size * 0.22, size * 0.22),
         }
@@ -2004,6 +2005,7 @@ function createMoireRenderer(): EffectRenderer {
   return { reset, update, draw }
 }
 
+/** 根据效果标识创建对应的独立渲染器实例。 */
 export function createEffectRenderer(effectId: BackgroundEffectId): EffectRenderer {
   switch (effectId) {
     case 'constellation':

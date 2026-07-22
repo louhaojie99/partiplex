@@ -1,20 +1,13 @@
-export {
-  BackgroundEffectsCanvas,
-  Partiplex,
-  PartiplexBackground,
-} from './PartiplexBackground'
 export type {
-  BackgroundEffectsCanvasHandle,
-  BackgroundEffectsCanvasProps,
   PartiplexBackgroundHandle,
   PartiplexBackgroundProps,
 } from './PartiplexBackground'
 export {
-  useBackgroundEffects,
-  usePartiplexBackground,
-} from './usePartiplexBackground'
+  Partiplex,
+  PartiplexBackground,
+} from './PartiplexBackground'
 export type {
   PartiplexBackgroundControls,
   PartiplexBackgroundOptions,
-  ReactBackgroundEffectsOptions,
 } from './usePartiplexBackground'
+export { usePartiplexBackground } from './usePartiplexBackground'
