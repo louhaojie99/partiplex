@@ -2,6 +2,9 @@
 
 [English](./README.md)
 
+[![npm 版本](https://img.shields.io/npm/v/partiplex.svg)](https://www.npmjs.com/package/partiplex)
+[![npm 月下载量](https://img.shields.io/npm/dm/partiplex.svg)](https://www.npmjs.com/package/partiplex)
+
 面向 TypeScript、Vue 与 React 的 20 个电影感 Canvas 背景。
 
 [文档](https://louhaojie99.github.io/partiplex/) · [全部效果](https://louhaojie99.github.io/partiplex/effects/)

@@ -2,6 +2,9 @@
 
 [简体中文](./README.zh-CN.md)
 
+[![npm version](https://img.shields.io/npm/v/partiplex.svg)](https://www.npmjs.com/package/partiplex)
+[![npm downloads](https://img.shields.io/npm/dm/partiplex.svg)](https://www.npmjs.com/package/partiplex)
+
 20 cinematic Canvas backgrounds for TypeScript, Vue, and React.
 
 [Docs](https://louhaojie99.github.io/partiplex/) · [Effects](https://louhaojie99.github.io/partiplex/en/effects/)
