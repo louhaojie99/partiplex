@@ -1,6 +1,6 @@
 {
   "name": "partiplex",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "20 cinematic Canvas backgrounds for TypeScript, Vue, and React.",
   "type": "module",
   "license": "MIT",
