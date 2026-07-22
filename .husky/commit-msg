@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+commit_msg_file="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+cd "$(dirname "$0")/.." || exit 1
+pnpm exec commitlint --edit "$commit_msg_file"
