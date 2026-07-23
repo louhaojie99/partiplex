@@ -12,6 +12,14 @@ function wrap(value: number, min: number, max: number) {
   return value
 }
 
+function pointerParallax(frame: EffectFrame, distanceX: number, distanceY = distanceX) {
+  if (!frame.pointer.active) return { x: 0, y: 0 }
+  return {
+    x: (frame.pointer.x / frame.width - 0.5) * distanceX,
+    y: (frame.pointer.y / frame.height - 0.5) * distanceY,
+  }
+}
+
 type ConstellationPoint = {
   x: number
   y: number
@@ -171,21 +179,43 @@ type GalaxySpark = {
   size: number
   strength: number
   twinkle: number
+  depth: number
+  drift: number
+}
+
+type GalaxyStar = {
+  x: number
+  y: number
+  size: number
+  strength: number
+  phase: number
+  depth: number
 }
 
 function createGalaxyVortexRenderer(): EffectRenderer {
   let elapsed = 0
   let sparks: GalaxySpark[] = []
+  let stars: GalaxyStar[] = []
 
   function reset(frame: EffectFrame) {
-    const count = frame.width <= 700 ? 150 : 360
+    const count = frame.width <= 700 ? 260 : 620
     sparks = Array.from({ length: count }, () => ({
       arm: Math.floor(Math.random() * 5),
-      progress: Math.random() ** 0.72,
-      offset: randomBetween(-0.12, 0.12),
-      size: randomBetween(0.35, 1.7),
-      strength: randomBetween(0.42, 1),
+      progress: Math.random() ** 0.64,
+      offset: randomBetween(-0.16, 0.16) * (0.35 + Math.random() * 0.65),
+      size: randomBetween(0.3, 2.05),
+      strength: randomBetween(0.36, 1),
       twinkle: Math.random() * Math.PI * 2,
+      depth: randomBetween(0.35, 1),
+      drift: randomBetween(0.72, 1.35),
+    }))
+    stars = Array.from({ length: frame.width <= 700 ? 90 : 210 }, () => ({
+      x: Math.random(),
+      y: Math.random(),
+      size: randomBetween(0.28, 1.3),
+      strength: randomBetween(0.24, 0.9),
+      phase: Math.random() * Math.PI * 2,
+      depth: randomBetween(0.2, 1),
     }))
     elapsed = 0
   }
@@ -194,69 +224,140 @@ function createGalaxyVortexRenderer(): EffectRenderer {
     elapsed += deltaSeconds
   }
 
-  function spiralPoint(arm: number, progress: number, offset: number, frame: EffectFrame) {
-    const angle = (arm / 5) * Math.PI * 2 + progress * Math.PI * 3.45 + elapsed * 0.032
-    const radius = progress ** 0.82
+  function spiralPoint(
+    arm: number,
+    progress: number,
+    offset: number,
+    frame: EffectFrame,
+    drift = 1,
+  ) {
+    const angle =
+      (arm / 5) * Math.PI * 2 + progress * Math.PI * 3.68 + elapsed * 0.026 * drift + offset * 0.55
+    const radius = progress ** 0.86
     const longRadius = Math.max(frame.width, frame.height * 1.35) * 0.63
     return {
       x: Math.cos(angle) * longRadius * radius,
-      y: Math.sin(angle) * longRadius * radius * 0.31 + offset * frame.height,
+      y:
+        Math.sin(angle) * longRadius * radius * 0.305 +
+        offset * frame.height * (0.32 + progress * 0.68),
     }
   }
 
   function draw(context: CanvasRenderingContext2D, frame: EffectFrame) {
-    const centerX = frame.width * (frame.width <= 700 ? 0.5 : 0.58)
-    const centerY = frame.height * 0.5
-    const rotation = -0.24
+    const isDark = frame.palette.primary[0] > 100
+    const foregroundShift = pointerParallax(frame, 34, 22)
+    const backgroundShift = pointerParallax(frame, -12, -8)
+    const centerX = frame.width * (frame.width <= 700 ? 0.5 : 0.58) + foregroundShift.x
+    const centerY = frame.height * 0.5 + foregroundShift.y
+    const rotation = -0.24 + (foregroundShift.x / Math.max(1, frame.width)) * 0.08
+
+    context.save()
+    context.globalCompositeOperation = isDark ? 'lighter' : 'source-over'
+    stars.forEach((star) => {
+      const pulse = 0.58 + Math.sin(elapsed * (0.32 + star.depth * 0.3) + star.phase) * 0.32
+      const x = star.x * frame.width + backgroundShift.x * star.depth
+      const y = star.y * frame.height + backgroundShift.y * star.depth
+      context.beginPath()
+      context.arc(x, y, star.size * (0.72 + star.depth * 0.42), 0, Math.PI * 2)
+      context.fillStyle = rgba(
+        star.depth > 0.72 ? frame.palette.primary : frame.palette.secondary,
+        frame.palette.softOpacity * star.strength * pulse * (isDark ? 0.78 : 0.5),
+      )
+      context.fill()
+    })
+    context.restore()
 
     context.save()
     context.translate(centerX, centerY)
     context.rotate(rotation)
 
+    const galaxyRadius = Math.max(frame.width, frame.height * 1.35) * 0.63
+    const haze = context.createRadialGradient(0, 0, 0, 0, 0, galaxyRadius)
+    haze.addColorStop(0, rgba(frame.palette.primary, frame.palette.faintOpacity * 0.72))
+    haze.addColorStop(0.24, rgba(frame.palette.secondary, frame.palette.faintOpacity * 0.34))
+    haze.addColorStop(0.68, rgba(frame.palette.primary, frame.palette.faintOpacity * 0.1))
+    haze.addColorStop(1, rgba(frame.palette.primary, 0))
+    context.save()
+    context.scale(1, 0.42)
+    context.fillStyle = haze
+    context.beginPath()
+    context.arc(0, 0, galaxyRadius, 0, Math.PI * 2)
+    context.fill()
+    context.restore()
+
     for (let arm = 0; arm < 5; arm += 1) {
-      for (let layer = 0; layer < 3; layer += 1) {
+      for (let layer = 0; layer < 7; layer += 1) {
+        const layerOffset = (layer - 3) * 0.021
         context.beginPath()
-        for (let sample = 0; sample <= 110; sample += 1) {
-          const progress = sample / 110
-          const point = spiralPoint(arm, progress, (layer - 1) * 0.025, frame)
+        for (let sample = 0; sample <= 126; sample += 1) {
+          const progress = sample / 126
+          const turbulence = Math.sin(progress * 16 + arm * 2.1 + layer) * 0.004
+          const point = spiralPoint(arm, progress, layerOffset + turbulence, frame)
           if (sample === 0) context.moveTo(point.x, point.y)
           else context.lineTo(point.x, point.y)
         }
+        const centerDistance = Math.abs(layer - 3)
         context.strokeStyle = rgba(
-          layer === 1 ? frame.palette.primary : frame.palette.secondary,
-          frame.palette.faintOpacity * (layer === 1 ? 0.82 : 0.38),
+          centerDistance <= 1 ? frame.palette.primary : frame.palette.secondary,
+          frame.palette.faintOpacity *
+            (centerDistance === 0 ? 0.86 : centerDistance === 1 ? 0.48 : 0.2),
         )
         context.lineWidth =
-          layer === 1 ? Math.max(1.1, frame.height * 0.012) : Math.max(0.55, frame.height * 0.004)
+          centerDistance === 0
+            ? Math.max(1.2, frame.height * 0.008)
+            : Math.max(0.5, frame.height * (0.0038 + centerDistance * 0.0016))
+        context.lineCap = 'round'
         context.stroke()
       }
     }
 
     context.globalCompositeOperation = 'lighter'
     sparks.forEach((spark) => {
-      const driftedProgress = (spark.progress + elapsed * 0.0018 * spark.strength) % 1
-      const point = spiralPoint(spark.arm, driftedProgress, spark.offset, frame)
-      const pulse = 0.72 + Math.sin(elapsed * 0.75 + spark.twinkle) * 0.28
-      const size = spark.size * (0.72 + driftedProgress * 0.72)
+      const driftedProgress =
+        (spark.progress + elapsed * 0.00125 * spark.strength * spark.drift) % 1
+      const point = spiralPoint(spark.arm, driftedProgress, spark.offset, frame, spark.drift)
+      const pulse = 0.68 + Math.sin(elapsed * (0.58 + spark.depth * 0.42) + spark.twinkle) * 0.32
+      const size = spark.size * (0.58 + driftedProgress * 0.72) * (0.68 + spark.depth * 0.48)
       context.beginPath()
       context.arc(point.x, point.y, size, 0, Math.PI * 2)
       context.fillStyle = rgba(
-        frame.palette.primary,
-        frame.palette.strongOpacity * spark.strength * pulse,
+        spark.depth > 0.72 ? frame.palette.primary : frame.palette.secondary,
+        frame.palette.strongOpacity * spark.strength * pulse * (isDark ? 0.9 : 0.72),
       )
       context.fill()
+
+      if (spark.strength > 0.92 && spark.depth > 0.72) {
+        const tangent = Math.atan2(point.y * 2.4, point.x) + Math.PI / 2
+        const streak = size * 4.5
+        context.beginPath()
+        context.moveTo(point.x - Math.cos(tangent) * streak, point.y - Math.sin(tangent) * streak)
+        context.lineTo(point.x + Math.cos(tangent) * streak, point.y + Math.sin(tangent) * streak)
+        context.strokeStyle = rgba(frame.palette.primary, frame.palette.softOpacity * pulse * 0.5)
+        context.lineWidth = 0.55
+        context.stroke()
+      }
     })
 
     const coreRadius = Math.max(18, Math.min(frame.width, frame.height) * 0.1)
-    const core = context.createRadialGradient(0, 0, 0, 0, 0, coreRadius * 2.8)
-    core.addColorStop(0, rgba(frame.palette.primary, frame.palette.strongOpacity * 0.95))
-    core.addColorStop(0.12, rgba(frame.palette.primary, frame.palette.softOpacity * 0.88))
-    core.addColorStop(0.5, rgba(frame.palette.secondary, frame.palette.faintOpacity * 0.42))
+    const core = context.createRadialGradient(0, 0, 0, 0, 0, coreRadius * 3.6)
+    core.addColorStop(0, rgba(frame.palette.primary, frame.palette.strongOpacity))
+    core.addColorStop(0.08, rgba(frame.palette.primary, frame.palette.strongOpacity * 0.92))
+    core.addColorStop(0.28, rgba(frame.palette.secondary, frame.palette.softOpacity * 0.72))
+    core.addColorStop(0.64, rgba(frame.palette.secondary, frame.palette.faintOpacity * 0.28))
     core.addColorStop(1, rgba(frame.palette.primary, 0))
     context.fillStyle = core
     context.beginPath()
-    context.arc(0, 0, coreRadius * 2.8, 0, Math.PI * 2)
+    context.arc(0, 0, coreRadius * 3.6, 0, Math.PI * 2)
     context.fill()
+
+    const flare = context.createLinearGradient(-coreRadius * 5, 0, coreRadius * 5, 0)
+    flare.addColorStop(0, rgba(frame.palette.primary, 0))
+    flare.addColorStop(0.42, rgba(frame.palette.secondary, frame.palette.faintOpacity * 0.16))
+    flare.addColorStop(0.5, rgba(frame.palette.primary, frame.palette.softOpacity * 0.68))
+    flare.addColorStop(0.58, rgba(frame.palette.secondary, frame.palette.faintOpacity * 0.16))
+    flare.addColorStop(1, rgba(frame.palette.primary, 0))
+    context.fillStyle = flare
+    context.fillRect(-coreRadius * 5, -0.5, coreRadius * 10, 1)
 
     context.restore()
   }
@@ -573,8 +674,9 @@ function createFlowFieldRenderer(): EffectRenderer {
   }
 
   function draw(context: CanvasRenderingContext2D, frame: EffectFrame) {
-    const targetX = frame.width * (0.56 + Math.sin(elapsed * 0.07) * 0.025)
-    const targetY = frame.height * (0.46 + Math.cos(elapsed * 0.09) * 0.035)
+    const shift = pointerParallax(frame, 26, 18)
+    const targetX = frame.width * (0.56 + Math.sin(elapsed * 0.07) * 0.025) + shift.x
+    const targetY = frame.height * (0.46 + Math.cos(elapsed * 0.09) * 0.035) + shift.y
     const glowRadius = Math.min(frame.width, frame.height) * 0.42
     const glow = context.createRadialGradient(targetX, targetY, 0, targetX, targetY, glowRadius)
     glow.addColorStop(0, rgba(frame.palette.primary, frame.palette.faintOpacity * 0.72))
@@ -1093,17 +1195,22 @@ function createTopographicRenderer(): EffectRenderer {
     return (ridge + secondRidge + waves) * Math.sin(depth * Math.PI) * (0.5 + depth * 0.5)
   }
 
-  function project(nx: number, depth: number, frame: EffectFrame) {
+  function project(nx: number, depth: number, frame: EffectFrame, shift: { x: number; y: number }) {
     const horizonY = -frame.height * 0.035
     const spread = 0.52 + depth ** 0.9 * 0.42
     const height = terrainHeight(nx, depth)
     return {
-      x: frame.width * 0.5 + nx * frame.width * spread,
-      y: horizonY + depth ** 1.28 * frame.height * 1.09 - height * frame.height * 0.34,
+      x: frame.width * 0.5 + nx * frame.width * spread + shift.x * (0.16 + depth * 0.84),
+      y:
+        horizonY +
+        depth ** 1.28 * frame.height * 1.09 -
+        height * frame.height * 0.34 +
+        shift.y * (0.12 + depth * 0.88),
     }
   }
 
   function draw(context: CanvasRenderingContext2D, frame: EffectFrame) {
+    const shift = pointerParallax(frame, 24, 14)
     context.save()
     context.lineJoin = 'round'
 
@@ -1112,7 +1219,7 @@ function createTopographicRenderer(): EffectRenderer {
       context.beginPath()
       for (let column = 0; column <= columns; column += 1) {
         const nx = (column / columns) * 2 - 1
-        const point = project(nx, depth, frame)
+        const point = project(nx, depth, frame, shift)
         if (column === 0) context.moveTo(point.x, point.y)
         else context.lineTo(point.x, point.y)
       }
@@ -1129,7 +1236,7 @@ function createTopographicRenderer(): EffectRenderer {
       context.beginPath()
       for (let row = 0; row <= rows; row += 1) {
         const depth = row / rows
-        const point = project(nx, depth, frame)
+        const point = project(nx, depth, frame, shift)
         if (row === 0) context.moveTo(point.x, point.y)
         else context.lineTo(point.x, point.y)
       }
@@ -1387,6 +1494,15 @@ type PortalRing = {
   width: number
 }
 
+type PortalSpark = {
+  angle: number
+  radius: number
+  speed: number
+  size: number
+  strength: number
+  phase: number
+}
+
 function createPortalRingsRenderer(): EffectRenderer {
   let elapsed = 0
   let centerX = 0
@@ -1394,6 +1510,7 @@ function createPortalRingsRenderer(): EffectRenderer {
   let maxRadiusX = 0
   let maxRadiusY = 0
   let rings: PortalRing[] = []
+  let sparks: PortalSpark[] = []
 
   function reset(frame: EffectFrame) {
     centerX = frame.width * (frame.width <= 700 ? 0.52 : 0.7)
@@ -1412,6 +1529,14 @@ function createPortalRingsRenderer(): EffectRenderer {
         width: index % 5 === 0 ? 1.55 : 0.72,
       }
     })
+    sparks = Array.from({ length: frame.width <= 700 ? 90 : 220 }, () => ({
+      angle: Math.random() * Math.PI * 2,
+      radius: randomBetween(0.08, 1),
+      speed: randomBetween(-0.14, 0.14),
+      size: randomBetween(0.3, 1.55),
+      strength: randomBetween(0.35, 1),
+      phase: Math.random() * Math.PI * 2,
+    }))
     elapsed = 0
   }
 
@@ -1421,8 +1546,33 @@ function createPortalRingsRenderer(): EffectRenderer {
 
   function draw(context: CanvasRenderingContext2D, frame: EffectFrame) {
     const isDark = frame.palette.primary[0] > 100
+    const shift = pointerParallax(frame, 28, 18)
+    const drawCenterX = centerX + shift.x
+    const drawCenterY = centerY + shift.y
+    const haloRadius = Math.max(maxRadiusX, maxRadiusY) * 0.88
+
+    const halo = context.createRadialGradient(
+      drawCenterX,
+      drawCenterY,
+      0,
+      drawCenterX,
+      drawCenterY,
+      haloRadius,
+    )
+    halo.addColorStop(0, rgba(frame.palette.primary, frame.palette.faintOpacity * 0.52))
+    halo.addColorStop(0.22, rgba(frame.palette.secondary, frame.palette.faintOpacity * 0.25))
+    halo.addColorStop(0.62, rgba(frame.palette.primary, frame.palette.faintOpacity * 0.08))
+    halo.addColorStop(1, rgba(frame.palette.primary, 0))
+    context.fillStyle = halo
+    context.fillRect(
+      drawCenterX - haloRadius,
+      drawCenterY - haloRadius,
+      haloRadius * 2,
+      haloRadius * 2,
+    )
+
     context.save()
-    context.translate(centerX, centerY)
+    context.translate(drawCenterX, drawCenterY)
 
     const apertureX = maxRadiusX * 0.14
     const apertureY = maxRadiusY * 0.12
@@ -1455,6 +1605,30 @@ function createPortalRingsRenderer(): EffectRenderer {
       context.stroke()
     }
 
+    context.save()
+    context.globalCompositeOperation = 'lighter'
+    sparks.forEach((spark) => {
+      const angle = spark.angle + elapsed * spark.speed
+      const inwardFlow = wrap(spark.radius - elapsed * 0.006 * Math.abs(spark.speed + 0.04), 0, 1)
+      const perspectiveRadius = 0.12 + inwardFlow ** 1.4 * 0.88
+      const x = Math.cos(angle) * maxRadiusX * perspectiveRadius
+      const y = Math.sin(angle) * maxRadiusY * perspectiveRadius
+      const pulse = 0.62 + Math.sin(elapsed * 0.8 + spark.phase) * 0.38
+      const opacity =
+        frame.palette.softOpacity *
+        spark.strength *
+        pulse *
+        Math.sin(Math.min(1, inwardFlow) * Math.PI)
+      context.beginPath()
+      context.arc(x, y, spark.size * (0.65 + perspectiveRadius * 0.55), 0, Math.PI * 2)
+      context.fillStyle = rgba(
+        spark.strength > 0.72 ? frame.palette.primary : frame.palette.secondary,
+        opacity,
+      )
+      context.fill()
+    })
+    context.restore()
+
     rings.forEach((ring, index) => {
       const compression = 1 + Math.sin(elapsed * 0.34 + index * 0.58) * 0.012
       context.save()
@@ -1476,6 +1650,10 @@ function createPortalRingsRenderer(): EffectRenderer {
         frame.palette.faintOpacity * 0.9 + (rings.length - index) * 0.014,
       )
       context.lineWidth = ring.width
+      if (index % 5 === 0) {
+        context.shadowBlur = 11
+        context.shadowColor = rgba(frame.palette.primary, frame.palette.softOpacity * 0.7)
+      }
       context.stroke()
       context.restore()
     })
@@ -1659,10 +1837,30 @@ function createScanlineRenderer(): EffectRenderer {
   return { reset, update, draw }
 }
 
+type AccretionSpark = {
+  angle: number
+  radius: number
+  vertical: number
+  size: number
+  speed: number
+  strength: number
+  phase: number
+}
+
 function createRibbonWaveRenderer(): EffectRenderer {
   let elapsed = 0
+  let sparks: AccretionSpark[] = []
 
-  function reset() {
+  function reset(frame: EffectFrame) {
+    sparks = Array.from({ length: frame.width <= 700 ? 150 : 380 }, () => ({
+      angle: Math.random() * Math.PI * 2,
+      radius: randomBetween(0.12, 1),
+      vertical: randomBetween(-1, 1),
+      size: randomBetween(0.28, 1.65),
+      speed: randomBetween(0.06, 0.2),
+      strength: randomBetween(0.3, 1),
+      phase: Math.random() * Math.PI * 2,
+    }))
     elapsed = 0
   }
 
@@ -1690,54 +1888,111 @@ function createRibbonWaveRenderer(): EffectRenderer {
   }
 
   function draw(context: CanvasRenderingContext2D, frame: EffectFrame) {
-    const centerX = frame.width * (frame.width <= 700 ? 0.52 : 0.61)
-    const centerY = frame.height * 0.5
+    const shift = pointerParallax(frame, 32, 20)
+    const centerX = frame.width * (frame.width <= 700 ? 0.52 : 0.61) + shift.x
+    const centerY = frame.height * 0.5 + shift.y
     const radiusX = Math.max(frame.width * 0.44, frame.height * 0.7)
     const radiusY = Math.max(24, frame.height * 0.13)
     const rotation = -0.13 + Math.sin(elapsed * 0.055) * 0.025
+    const isDark = frame.palette.primary[0] > 100
+    const haloRadius = radiusY * 5.4
+    const halo = context.createRadialGradient(
+      centerX,
+      centerY,
+      radiusY * 0.4,
+      centerX,
+      centerY,
+      haloRadius,
+    )
+    halo.addColorStop(0, rgba(frame.palette.primary, frame.palette.faintOpacity * 0.38))
+    halo.addColorStop(0.28, rgba(frame.palette.secondary, frame.palette.faintOpacity * 0.2))
+    halo.addColorStop(1, rgba(frame.palette.primary, 0))
+    context.fillStyle = halo
+    context.fillRect(centerX - haloRadius, centerY - haloRadius, haloRadius * 2, haloRadius * 2)
 
     context.save()
     context.translate(centerX, centerY)
     context.globalCompositeOperation = 'lighter'
 
-    for (let layer = 5; layer >= 0; layer -= 1) {
-      const scale = 1 + layer * 0.1
+    for (let layer = 15; layer >= 0; layer -= 1) {
+      const scale = 0.72 + layer * 0.045
+      const flicker = 0.82 + Math.sin(elapsed * 0.18 + layer * 1.7) * 0.18
       drawDisc(
         context,
         frame,
         radiusX * scale,
-        radiusY * scale,
-        rotation,
-        Math.sin(elapsed * 0.12 + layer) * radiusY * 0.06,
-        frame.palette.faintOpacity * (0.25 + (5 - layer) * 0.12),
+        radiusY * (0.54 + scale * 0.48),
+        rotation + Math.sin(layer * 2.3) * 0.008,
+        Math.sin(elapsed * 0.12 + layer) * radiusY * 0.075,
+        frame.palette.faintOpacity * (0.14 + (15 - layer) * 0.032) * flicker,
       )
     }
 
+    function drawSparks(inFront: boolean) {
+      sparks.forEach((spark) => {
+        const angle = spark.angle + (elapsed * spark.speed) / (0.38 + spark.radius * 0.8)
+        const front = Math.sin(angle) > 0
+        if (front !== inFront) return
+        const orbitalRadius = radiusX * (0.18 + spark.radius * 0.94)
+        const flatY =
+          Math.sin(angle) * radiusY * (0.38 + spark.radius * 0.82) +
+          spark.vertical * radiusY * 0.15 * spark.radius
+        const flatX = Math.cos(angle) * orbitalRadius
+        const cosRotation = Math.cos(rotation)
+        const sinRotation = Math.sin(rotation)
+        const x = flatX * cosRotation - flatY * sinRotation
+        const y = flatX * sinRotation + flatY * cosRotation
+        const pulse = 0.68 + Math.sin(elapsed * 0.72 + spark.phase) * 0.32
+        const depth = front ? 1 : 0.52
+
+        context.beginPath()
+        context.arc(x, y, spark.size * (0.58 + spark.radius * 0.62), 0, Math.PI * 2)
+        context.fillStyle = rgba(
+          spark.strength > 0.76 ? frame.palette.primary : frame.palette.secondary,
+          frame.palette.strongOpacity * spark.strength * pulse * depth * (isDark ? 0.88 : 0.68),
+        )
+        context.fill()
+      })
+    }
+
+    drawSparks(false)
+
     context.globalCompositeOperation = 'source-over'
-    const coreGradient = context.createRadialGradient(0, 0, radiusY * 0.12, 0, 0, radiusY * 2.15)
+    const coreGradient = context.createRadialGradient(0, 0, radiusY * 0.12, 0, 0, radiusY * 2.5)
     coreGradient.addColorStop(0, 'rgba(0, 0, 0, 0.98)')
-    coreGradient.addColorStop(0.68, 'rgba(0, 0, 0, 0.94)')
-    coreGradient.addColorStop(0.82, rgba(frame.palette.primary, frame.palette.softOpacity * 0.5))
+    coreGradient.addColorStop(0.62, 'rgba(0, 0, 0, 0.98)')
+    coreGradient.addColorStop(0.72, 'rgba(0, 0, 0, 0.92)')
+    coreGradient.addColorStop(0.8, rgba(frame.palette.primary, frame.palette.softOpacity * 0.72))
+    coreGradient.addColorStop(
+      0.88,
+      rgba(frame.palette.secondary, frame.palette.faintOpacity * 0.34),
+    )
     coreGradient.addColorStop(1, rgba(frame.palette.primary, 0))
     context.fillStyle = coreGradient
     context.beginPath()
-    context.arc(0, 0, radiusY * 2.25, 0, Math.PI * 2)
+    context.arc(0, 0, radiusY * 2.55, 0, Math.PI * 2)
     context.fill()
+
+    context.globalCompositeOperation = 'lighter'
+    drawSparks(true)
 
     context.beginPath()
     context.ellipse(0, 0, radiusX * 0.64, radiusY * 0.62, rotation, 0, Math.PI * 2)
-    context.strokeStyle = rgba(frame.palette.primary, frame.palette.strongOpacity * 0.82)
-    context.lineWidth = Math.max(1.2, radiusY * 0.07)
+    context.strokeStyle = rgba(frame.palette.primary, frame.palette.strongOpacity * 0.88)
+    context.lineWidth = Math.max(1.2, radiusY * 0.055)
+    context.shadowBlur = 16
+    context.shadowColor = rgba(frame.palette.primary, frame.palette.softOpacity * 0.75)
     context.stroke()
+    context.shadowBlur = 0
 
-    const lensRadius = radiusY * 2.4
+    const lensRadius = radiusY * 2.62
     context.beginPath()
-    context.arc(0, 0, lensRadius, Math.PI * 1.08, Math.PI * 1.92)
+    context.arc(0, 0, lensRadius, Math.PI * 1.06, Math.PI * 1.94)
     context.strokeStyle = rgba(frame.palette.secondary, frame.palette.softOpacity * 0.72)
-    context.lineWidth = 1
+    context.lineWidth = 1.2
     context.stroke()
     context.beginPath()
-    context.arc(0, 0, lensRadius, Math.PI * 0.08, Math.PI * 0.92)
+    context.arc(0, 0, lensRadius, Math.PI * 0.06, Math.PI * 0.94)
     context.strokeStyle = rgba(frame.palette.primary, frame.palette.faintOpacity * 0.9)
     context.stroke()
 
@@ -1957,18 +2212,54 @@ function createMoireRenderer(): EffectRenderer {
       [2, 6],
       [3, 7],
     ]
+    const faces = [
+      [0, 1, 2, 3],
+      [4, 5, 6, 7],
+      [0, 1, 5, 4],
+      [2, 3, 7, 6],
+      [1, 2, 6, 5],
+      [0, 3, 7, 4],
+    ]
+    const shift = pointerParallax(frame, 22, 16)
+    const pointerRotation = frame.pointer.active ? (frame.pointer.x / frame.width - 0.5) * 0.42 : 0
+    const pointerTilt = frame.pointer.active ? (frame.pointer.y / frame.height - 0.5) * 0.28 : 0
 
     cubes.forEach((cube, cubeIndex) => {
       const angle = cube.phase + elapsed * cube.speed
       const projected = vertices.map(([x = 0, y = 0, z = 0]) => {
-        const point = rotatePoint(x, y, z, angle * 0.72, angle)
+        const point = rotatePoint(x, y, z, angle * 0.72 + pointerTilt, angle + pointerRotation)
         const perspective = 1 / (1.8 - point.z * 0.18)
         return {
-          x: frame.width * cube.xRatio + point.x * cube.size * perspective,
-          y: frame.height * cube.yRatio + point.y * cube.size * perspective,
+          x: frame.width * cube.xRatio + shift.x * cube.depth + point.x * cube.size * perspective,
+          y: frame.height * cube.yRatio + shift.y * cube.depth + point.y * cube.size * perspective,
           z: point.z,
         }
       })
+
+      faces
+        .map((face) => ({
+          face,
+          depth:
+            face.reduce((sum, vertexIndex) => sum + (projected[vertexIndex]?.z ?? 0), 0) /
+            face.length,
+        }))
+        .sort((first, second) => first.depth - second.depth)
+        .forEach(({ face, depth }, faceIndex) => {
+          const first = projected[face[0] ?? 0]
+          if (!first) return
+          context.beginPath()
+          context.moveTo(first.x, first.y)
+          face.slice(1).forEach((vertexIndex) => {
+            const vertex = projected[vertexIndex]
+            if (vertex) context.lineTo(vertex.x, vertex.y)
+          })
+          context.closePath()
+          context.fillStyle = rgba(
+            faceIndex % 2 === 0 ? frame.palette.primary : frame.palette.secondary,
+            frame.palette.faintOpacity * cube.depth * (0.035 + ((depth + 1.8) / 3.6) * 0.1),
+          )
+          context.fill()
+        })
 
       edges.forEach(([fromIndex = 0, toIndex = 0], edgeIndex) => {
         const from = projected[fromIndex]
@@ -1990,8 +2281,8 @@ function createMoireRenderer(): EffectRenderer {
         const centerPulse = 1.2 + Math.sin(elapsed * 0.6 + cube.phase) * 0.5
         context.beginPath()
         context.arc(
-          frame.width * cube.xRatio,
-          frame.height * cube.yRatio,
+          frame.width * cube.xRatio + shift.x * cube.depth,
+          frame.height * cube.yRatio + shift.y * cube.depth,
           centerPulse,
           0,
           Math.PI * 2,

@@ -2,7 +2,7 @@
 import { useData, withBase } from 'vitepress'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { type BackgroundEffectId, PartiplexController } from '../../src/index'
-import type { DocsLocale } from '../data/effects'
+import { type DocsLocale, getEffectDoc } from '../data/effects'
 
 const props = withDefaults(
   defineProps<{
@@ -23,8 +23,10 @@ const heroEffects: BackgroundEffectId[] = [
 ]
 const canvas = ref<HTMLCanvasElement | null>(null)
 const activeEffect = ref<BackgroundEffectId>(heroEffects[0])
+const isReady = ref(false)
 const { isDark } = useData()
 let controller: PartiplexController | null = null
+let readyFrame = 0
 
 watch(isDark, (dark) => controller?.setTheme(dark ? 'dark' : 'light'))
 
@@ -37,6 +39,7 @@ onMounted(() => {
   if (!canvas.value) return
   controller = new PartiplexController(canvas.value, {
     theme: isDark.value ? 'dark' : 'light',
+    interactive: false,
     intensity: 1.55,
     maxFps: 60,
     onEffectChange: (effectId) => {
@@ -49,34 +52,71 @@ onMounted(() => {
       intervalMs: 10_000,
     },
   }).start()
+  readyFrame = window.requestAnimationFrame(() => {
+    isReady.value = true
+  })
 })
 
 onBeforeUnmount(() => {
+  window.cancelAnimationFrame(readyFrame)
   controller?.destroy()
   controller = null
 })
 </script>
 
 <template>
-  <section class="home-hero" aria-labelledby="partiplex-title">
+  <section
+    class="home-hero"
+    :class="{ 'is-ready': isReady }"
+    aria-labelledby="partiplex-title"
+  >
     <canvas ref="canvas" class="home-hero__canvas" aria-hidden="true" />
     <div class="home-hero__shade" aria-hidden="true" />
+    <div class="home-hero__grid" aria-hidden="true" />
+    <div class="home-hero__noise" aria-hidden="true" />
+    <div class="home-hero__frame" aria-hidden="true">
+      <span />
+      <span />
+      <span />
+      <span />
+    </div>
 
     <div class="home-hero__content">
-      <p class="home-hero__eyebrow">CANVAS BACKGROUNDS / 20</p>
-      <h1 id="partiplex-title">Partiplex</h1>
-      <p class="home-hero__line">
-        {{ props.locale === 'zh' ? '20 个背景。一行接入。' : '20 backgrounds. One line.' }}
-      </p>
+      <div class="home-hero__copy">
+        <p class="home-hero__eyebrow">
+          <span class="home-hero__signal" aria-hidden="true" />
+          REAL-TIME GENERATIVE CANVAS
+          <span>20 / 20</span>
+        </p>
+        <h1 id="partiplex-title">
+          <span>Parti</span><span>plex</span>
+        </h1>
+        <p class="home-hero__line">
+          {{
+            props.locale === 'zh'
+              ? '20 个电影级动态背景，一行代码即刻接入。'
+              : '20 cinematic backgrounds. One line to make it move.'
+          }}
+        </p>
 
-      <div class="home-hero__actions">
-        <a class="px-button px-button--primary" :href="withBase(props.locale === 'zh' ? '/guide/start' : '/en/guide/start')">
-          {{ props.locale === 'zh' ? '开始' : 'Start' }}
-        </a>
-        <a class="px-button" :href="withBase(props.locale === 'zh' ? '/effects/' : '/en/effects/')">
-          {{ props.locale === 'zh' ? '效果' : 'Effects' }}
-        </a>
+        <div class="home-hero__actions">
+          <a
+            class="px-button px-button--primary"
+            :href="withBase(props.locale === 'zh' ? '/guide/start' : '/en/guide/start')"
+          >
+            <span>{{ props.locale === 'zh' ? '开始创造' : 'Start creating' }}</span>
+            <span aria-hidden="true">↗</span>
+          </a>
+          <a
+            class="px-button"
+            :href="withBase(props.locale === 'zh' ? '/effects/' : '/en/effects/')"
+          >
+            <span>{{ props.locale === 'zh' ? '探索全部效果' : 'Explore effects' }}</span>
+            <span aria-hidden="true">→</span>
+          </a>
+        </div>
       </div>
+
     </div>
 
     <div class="home-hero__switcher" :aria-label="props.locale === 'zh' ? '首页效果' : 'Hero effects'">
@@ -89,8 +129,14 @@ onBeforeUnmount(() => {
         :aria-pressed="activeEffect === effectId"
         @click="showEffect(effectId)"
       >
-        {{ String(index + 1).padStart(2, '0') }}
+        <span>{{ String(index + 1).padStart(2, '0') }}</span>
+        <span>{{ getEffectDoc(effectId)?.[props.locale].name }}</span>
       </button>
+    </div>
+
+    <div class="home-hero__scroll" aria-hidden="true">
+      <span>{{ props.locale === 'zh' ? '向下探索' : 'Scroll to explore' }}</span>
+      <i />
     </div>
   </section>
 </template>

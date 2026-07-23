@@ -43,6 +43,7 @@ export class PartiplexController {
   private minFrameIntervalMs: number
   private manuallyPaused = false
   private pointer = { x: 0, y: 0, active: false }
+  private pointerTarget = { x: 0, y: 0, active: false }
 
   /** 使用目标 Canvas 和可选配置创建控制器，调用 start() 后开始渲染。 */
   constructor(canvas: HTMLCanvasElement, options: PartiplexControllerOptions = {}) {
@@ -159,6 +160,7 @@ export class PartiplexController {
       } else {
         window.removeEventListener('pointermove', this.handlePointerMove)
         document.documentElement.removeEventListener('mouseleave', this.handlePointerLeave)
+        this.pointerTarget.active = false
         this.pointer.active = false
       }
     }
@@ -359,6 +361,10 @@ export class PartiplexController {
     const deltaSeconds = Math.min(0.05, Math.max(0, elapsedMs / 1000))
     this.previousFrameAt = now
     this.rotate(now)
+    const pointerEase = 1 - Math.exp(-deltaSeconds * 8)
+    this.pointer.x += (this.pointerTarget.x - this.pointer.x) * pointerEase
+    this.pointer.y += (this.pointerTarget.y - this.pointer.y) * pointerEase
+    this.pointer.active = this.pointerTarget.active
     const frame = this.getFrame()
     this.previousRenderer?.update(deltaSeconds, frame)
     this.renderer.update(deltaSeconds, frame)
@@ -373,17 +379,21 @@ export class PartiplexController {
   private handlePointerMove = (event: PointerEvent) => {
     if (event.pointerType === 'touch') return
     const bounds = this.canvas.getBoundingClientRect()
-    this.pointer.x = event.clientX - bounds.left
-    this.pointer.y = event.clientY - bounds.top
-    this.pointer.active =
-      this.pointer.x >= 0 &&
-      this.pointer.x <= bounds.width &&
-      this.pointer.y >= 0 &&
-      this.pointer.y <= bounds.height
-    if (this.reducedMotion) this.renderOnce()
+    this.pointerTarget.x = event.clientX - bounds.left
+    this.pointerTarget.y = event.clientY - bounds.top
+    this.pointerTarget.active =
+      this.pointerTarget.x >= 0 &&
+      this.pointerTarget.x <= bounds.width &&
+      this.pointerTarget.y >= 0 &&
+      this.pointerTarget.y <= bounds.height
+    if (this.reducedMotion) {
+      this.pointer = { ...this.pointerTarget }
+      this.renderOnce()
+    }
   }
 
   private handlePointerLeave = () => {
+    this.pointerTarget.active = false
     this.pointer.active = false
     if (this.reducedMotion) this.renderOnce()
   }
